@@ -45,7 +45,7 @@ module spio_hss_multiplexer_pkt_store
 
   // remote channel flow control interface
   input wire 		       cfc_rem,
- 
+
   // ack/nack interface
   input wire 		       vld_ack,
   input wire 		       vld_nak,
@@ -176,6 +176,7 @@ module spio_hss_multiplexer_pkt_store
     else
       br <= nxt_br;
 
+  // a nak requests that frame ack_seq is re-sent.
   always @ (*)
     casex ({vld_nak, reading})
         2'b1x:   nxt_br = seq_to_reg;  // nack'd frame
@@ -193,15 +194,13 @@ module spio_hss_multiplexer_pkt_store
     else
       ba <= nxt_ba;
 
-  // to simplify ack/nak treatment, ack_seq is used in the same way
-  // in both: frame ack_seq is not ack'ed, all previous ones are.
-  // Additionally, a nak requests that frame ack_seq is re-sent.
+  // to simplify ack treatment, frame ack_seq is not ack'ed
+  // but all previous ones are.
   always @ (*)
-    casex ({vld_nak, vld_ack, (ack_seq == bpkt_seq)})
-        3'b1xx,                        // nacks ack implicitly
-        3'bx10:  nxt_ba = seq_to_reg;  // valid ack
+    casex ({vld_ack, (ack_seq == bpkt_seq)})
+        2'b10:   nxt_ba = seq_to_reg;  // valid ack
 
-        3'bx11:  nxt_ba = br;          // no pending acks
+        2'b11:   nxt_ba = br;          // no pending acks
 
         default: nxt_ba = ba;          // no change!
     endcase
